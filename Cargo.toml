@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "igor-microphoned-lib",
+    "igor-microphoned-daemon"
+]

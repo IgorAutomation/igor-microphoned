@@ -1,0 +1,4 @@
+/target
+.idea
+
+igor-microphoned-daemon/Cargo.lock

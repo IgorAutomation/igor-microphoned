@@ -1,0 +1,10 @@
+[package]
+name = "igor-microphoned-daemon"
+version = "0.1.0"
+edition = "2018"
+homepage = "https://github.com/IgorAutomation/"
+
+[dependencies]
+
+
+[build-dependencies]
