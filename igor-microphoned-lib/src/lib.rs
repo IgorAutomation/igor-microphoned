@@ -1,6 +1,5 @@
-
-use cpal::{HostId, Host, Device};
-use cpal::traits::{HostTrait, DeviceTrait};
+use cpal::{Device, Host, HostId};
+use cpal::traits::{DeviceTrait, HostTrait};
 
 pub fn list_host_names() -> impl Iterator<Item = &'static str> {
     return cpal::available_hosts()
@@ -15,12 +14,13 @@ pub fn find_host_id_by_name(name: &str) -> Option<HostId> {
 }
 
 pub fn find_host_and_device(host_name: &str, device_name: &str) -> Option<(Host, Device)> {
-    let host_id = find_host_id_by_name(host_name)?;
-    let host = cpal::host_from_id(host_id)?;
-
-    return host.input_devices()
-        .find(|d| d.name().eq(device_name))
-        .map(|d| (host, d));
+    return find_host_id_by_name(host_name)
+        .map(|host_id| cpal::host_from_id(host_id)
+            .unwrap())
+        .map( |host| host.input_devices()
+            .unwrap()
+            .find(|d| d.name().unwrap().eq(device_name))
+            .map(|d| (host, d)));
 }
 
 #[cfg(test)]
