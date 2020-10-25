@@ -20,7 +20,7 @@ pub fn find_host_and_device(host_name: &str, device_name: &str) -> Option<(Host,
 
     return host.input_devices()
         .find(|d| d.name().eq(device_name))
-        .map(|d| Some((host, d)));
+        .map(|d| (host, d));
 }
 
 #[cfg(test)]
