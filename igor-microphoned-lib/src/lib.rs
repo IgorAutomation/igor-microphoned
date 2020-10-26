@@ -1,3 +1,12 @@
+#![deny(nonstandard_style, future_incompatible, clippy::all, clippy::nursery, clippy::needless_return)]
+#![allow(
+    clippy::module_name_repetitions,
+    clippy::multiple_inherent_impl,
+    clippy::implicit_return,
+    clippy::missing_inline_in_public_items,
+    clippy::missing_docs_in_private_items
+)]
+
 use cpal::{Device, Host, HostId, DevicesError, HostUnavailable};
 use cpal::traits::{DeviceTrait, HostTrait};
 use thiserror::Error;
@@ -13,13 +22,13 @@ pub enum AudioError {
 }
 
 pub fn list_host_names() -> impl Iterator<Item = &'static str> {
-    return cpal::available_hosts()
+    cpal::available_hosts()
         .into_iter()
         .map(|h| h.name())
 }
 
 pub fn find_host_id_by_name(name: &str) -> Result<HostId, AudioError> {
-    return cpal::available_hosts()
+    cpal::available_hosts()
         .into_iter()
         .find(|h| h.name().eq(name))
         .ok_or(AudioError::HostNotFoundError(HostUnavailable))
@@ -28,10 +37,10 @@ pub fn find_host_id_by_name(name: &str) -> Result<HostId, AudioError> {
 pub fn find_host_and_device(host_name: &str, device_name: &str) -> Result<(Host, Device), AudioError> {
     let host_id = find_host_id_by_name(host_name)?;
     let host = cpal::host_from_id(host_id)?;
-    return host.input_devices()?
+    host.input_devices()?
         .find(|d| d.name().ok().unwrap().eq(device_name))
         .map(|d| (host, d))
-        .ok_or(AudioError::DeviceNotFoundError);
+        .ok_or(AudioError::DeviceNotFoundError)
 }
 
 #[cfg(test)]
@@ -43,7 +52,6 @@ mod test {
 
         let mut x = 0;
         for name in list_host_names() {
-            println!("Found host name: {}", name);
             let host_id = find_host_id_by_name(name).expect("Unable to find_host_id_by_name");
             let host = cpal::host_from_id(host_id).expect("Unable to host_from_id");
             assert_eq!(host_id, host.id());
