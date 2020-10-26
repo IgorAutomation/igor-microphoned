@@ -1,5 +1,16 @@
-use cpal::{Device, Host, HostId};
+use cpal::{Device, Host, HostId, DevicesError, HostUnavailable};
 use cpal::traits::{DeviceTrait, HostTrait};
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum AudioError {
+    #[error(transparent)]
+    DeviceError(#[from] DevicesError),
+    #[error("host not found")]
+    DeviceNotFoundError,
+    #[error("host not found")]
+    HostNotFoundError(#[from] HostUnavailable),
+}
 
 pub fn list_host_names() -> impl Iterator<Item = &'static str> {
     return cpal::available_hosts()
@@ -7,20 +18,20 @@ pub fn list_host_names() -> impl Iterator<Item = &'static str> {
         .map(|h| h.name())
 }
 
-pub fn find_host_id_by_name(name: &str) -> Option<HostId> {
+pub fn find_host_id_by_name(name: &str) -> Result<HostId, AudioError> {
     return cpal::available_hosts()
         .into_iter()
         .find(|h| h.name().eq(name))
+        .ok_or(AudioError::HostNotFoundError(HostUnavailable))
 }
 
-pub fn find_host_and_device(host_name: &str, device_name: &str) -> Option<(Host, Device)> {
-    return find_host_id_by_name(host_name)
-        .map(|host_id| cpal::host_from_id(host_id)
-            .unwrap())
-        .map( |host| host.input_devices()
-            .unwrap()
-            .find(|d| d.name().unwrap().eq(device_name))
-            .map(|d| (host, d)));
+pub fn find_host_and_device(host_name: &str, device_name: &str) -> Result<(Host, Device), AudioError> {
+    let host_id = find_host_id_by_name(host_name)?;
+    let host = cpal::host_from_id(host_id)?;
+    return host.input_devices()?
+        .find(|d| d.name().ok().unwrap().eq(device_name))
+        .map(|d| (host, d))
+        .ok_or(AudioError::DeviceNotFoundError);
 }
 
 #[cfg(test)]

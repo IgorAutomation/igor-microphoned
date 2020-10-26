@@ -7,5 +7,6 @@ homepage = "https://github.com/IgorAutomation/"
 [dependencies]
 cpal = "0.12.1"
 deepspeech = "0.8.0"
+thiserror = "1.0.21"
 
 [build-dependencies]
