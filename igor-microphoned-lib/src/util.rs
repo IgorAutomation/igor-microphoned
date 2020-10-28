@@ -1,4 +1,4 @@
-use cpal::{Device, Host, HostId, HostUnavailable};
+use cpal::{Device, Host, HostId};
 use cpal::traits::{DeviceTrait, HostTrait};
 use crate::errors::Error;
 
@@ -8,21 +8,30 @@ pub fn list_host_names() -> impl Iterator<Item = &'static str> {
         .map(|h| h.name())
 }
 
-pub fn find_host_id_by_name(name: &str) -> Result<HostId, Error> {
+pub fn find_host_id_by_name(name: &str) -> Option<HostId> {
     cpal::available_hosts()
         .into_iter()
-        .find(|h| h.name().eq(name))
-        .ok_or(Error::HostNotFoundError(HostUnavailable))
+        .find(|h| h.name().eq_ignore_ascii_case(name))
 }
 
-pub fn find_host_and_device(host_name: &str, device_name: &str) -> Result<(Host, Device), Error> {
-    let host_id = find_host_id_by_name(host_name)?;
-    let host = cpal::host_from_id(host_id)?;
-    host.input_devices()?
-        .filter(|d| d.name().is_ok())
-        .find(|d| d.name().unwrap().eq(device_name))
-        .map(|d| (host, d))
-        .ok_or(Error::DeviceNotFoundError)
+pub fn find_host_by_name(host_name: &str) -> Result<Option<Host>, Error> {
+    if let Some(host_id) = find_host_id_by_name(host_name) {
+        cpal::host_from_id(host_id)
+            .map(Option::from)
+            .map_err(Error::HostNotFoundError)
+    } else {
+        Ok(None)
+    }
+}
+
+pub fn find_host_and_device(host_name: &str, device_name: &str) -> Result<Option<(Host, Device)>, Error> {
+    let host = find_host_by_name(host_name)?;
+
+    host.map_or(Ok(None), |host| host.input_devices()?
+        .find(|d| d.name()
+            .map_or(false, |name| name.eq_ignore_ascii_case(device_name)))
+        .map(|d| Some((host, d)))
+        .ok_or(Error::DeviceNotFoundError))
 }
 
 #[cfg(test)]
@@ -39,7 +48,7 @@ mod test {
     }
 
     #[test]
-    fn test_cam_find_enumerated_hosts() {
+    fn test_cam_find_enumerated_hosts_by_id() {
         let mut host_count = 0;
         for host_name in list_host_names() {
             let host_id = find_host_id_by_name(host_name).expect("Unable to find_host_id_by_name");
@@ -51,13 +60,24 @@ mod test {
     }
 
     #[test]
+    fn test_cam_find_enumerated_hosts_by_name() {
+        let mut host_count = 0;
+        for host_name in list_host_names() {
+            let h = find_host_by_name(host_name).unwrap().unwrap();
+            assert_eq!(host_name, h.id().name());
+            host_count = host_count + 1;
+        }
+        assert!(host_count > 0);
+    }
+
+    #[test]
     fn test_host_not_found_error() {
         let result = find_host_id_by_name("penis");
-        assert!(result.is_err());
-        assert_eq!(Error::HostNotFoundError(HostUnavailable), result.err().unwrap());
+        assert!(result.is_none());
 
         let result = find_host_and_device("ass fucker", "penis");
-        assert_eq!(Error::HostNotFoundError(HostUnavailable), result.err().unwrap());
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_none());
     }
 
     #[test]
@@ -87,7 +107,8 @@ mod test {
 
                 let device_name = d.name().expect("Unable to get name");
                 let (host, device) = find_host_and_device(host_name, &device_name)
-                    .expect("Unable to find host and device");
+                    .expect("Unable to find host and device")
+                    .unwrap();
 
                 assert_eq!(d.name().expect("d name"), device.name().expect("device name"));
                 assert_eq!(h.id(), host.id());

@@ -7,5 +7,5 @@
     clippy::missing_docs_in_private_items
 )]
 
-mod errors;
-mod util;
+pub mod errors;
+pub mod util;

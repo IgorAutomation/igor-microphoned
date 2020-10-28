@@ -219,6 +219,11 @@ dependencies = [
 [[package]]
 name = "igor-microphoned-daemon"
 version = "0.1.0"
+dependencies = [
+ "cpal",
+ "igor-microphoned-lib",
+ "structopt",
+]
 
 [[package]]
 name = "igor-microphoned-lib"
@@ -226,7 +231,6 @@ version = "0.1.0"
 dependencies = [
  "cpal",
  "deepspeech",
- "structopt",
  "thiserror",
  "tracing",
 ]
