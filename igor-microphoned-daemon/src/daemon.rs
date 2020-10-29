@@ -1,12 +1,13 @@
 
 use structopt::StructOpt;
 
-use igormdlib::util::find_host_id_by_name;
+use igormdlib::util::{find_host_id_by_name, convert_sample_for_deepspeech};
 use igormdlib::util::list_host_names;
 use igormdlib::util::find_device_by_name;
 
 use crate::cmdline::Opt;
-use cpal::traits::{HostTrait, DeviceTrait};
+use cpal::traits::{HostTrait, DeviceTrait, StreamTrait};
+use cpal::{StreamConfig, BufferSize, SampleFormat, SupportedBufferSize};
 
 pub fn launch() {
 
@@ -70,9 +71,69 @@ pub fn launch() {
         let name = device.name()
             .unwrap_or_else(|_e| "Unknown".to_string());
         println!("Selected device: {}", name);
+
+
+        if let Ok(sc) = device.supported_input_configs() {
+            println!("Selected device: {}", name);
+            for config in sc {
+                println!("\t========================================");
+                println!("\tchannel_count: {}", config.channels());
+                println!("\tmin_sample_rate: {}", config.min_sample_rate().0);
+                println!("\tmax_sample_rate: {}", config.max_sample_rate().0);
+                match config.buffer_size() {
+                    SupportedBufferSize::Range { min, max } => {
+                        println!("\tbuffer_size: {} to {}", min, max);
+                    },
+                    SupportedBufferSize::Unknown => (),
+                }
+                match config.sample_format() {
+                    SampleFormat::I16 => println!("\tsample_format: I16"),
+                    SampleFormat::U16 => println!("\tsample_format: U16"),
+                    SampleFormat::F32 => println!("\tsample_format: F32"),
+                }
+            }
+
+        } else {
+            eprintln!("Unable to enumerate supported configuration");
+        }
+
+
     }
 
-    
+    // read words
+    match (opt.read_words, &selected_device) {
+        (true, Some(ref device)) => {
+
+            let mut supported_configs_range = device.supported_input_configs()
+                .expect("Supported configs");
+
+            let supported_config = supported_configs_range.next()
+                .expect("no supported config?!")
+                .with_max_sample_rate();
+
+            let stream_config = StreamConfig {
+                channels: 1,
+                buffer_size: BufferSize::Fixed(1234),
+                sample_rate: supported_config.sample_rate()
+            };
+
+            let stream = device.build_input_stream_raw(
+                &stream_config,
+                supported_config.sample_format(),
+                move |data, &_ | {
+                    let converted_data = convert_sample_for_deepspeech(data);
+                    println!("data in size: {}", converted_data.len().to_string());
+                },
+                move |_| eprintln!("an error occurred on stream"))
+                .expect("Unable to build raw input stream from device");
+
+            // TODO: ass fuck
+            stream.play();
+            std::thread::sleep(std::time::Duration::from_secs(3));
+        }
+        _ => {}
+    };
+
 
 }
 

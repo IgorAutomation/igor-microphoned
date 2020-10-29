@@ -1,7 +1,27 @@
-use cpal::{Device, Host, HostId};
+use cpal::{Data, Device, Host, HostId, Sample, SampleFormat};
 use cpal::traits::{DeviceTrait, HostTrait};
 
 use crate::errors::Error;
+
+pub fn convert_sample_for_deepspeech(data: &Data) -> Vec<i16> {
+    match data.sample_format() {
+        SampleFormat::I16 => data.as_slice::<i16>()
+            .unwrap()
+            .iter()
+            .map(|s| s.to_i16())
+            .collect::<Vec<i16>>(),
+        SampleFormat::U16 => data.as_slice::<u16>()
+            .unwrap()
+            .iter()
+            .map(|s| s.to_i16())
+            .collect::<Vec<i16>>(),
+        SampleFormat::F32 => data.as_slice::<f32>()
+            .unwrap()
+            .iter()
+            .map(|s| s.to_i16())
+            .collect::<Vec<i16>>()
+    }
+}
 
 pub fn list_host_names() -> impl Iterator<Item = &'static str> {
     cpal::available_hosts()

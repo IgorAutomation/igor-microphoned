@@ -21,4 +21,8 @@ pub struct Opt {
     #[structopt(short, long)]
     pub device: Option<String>,
 
+    /// Read words from the given device
+    #[structopt(long)]
+    pub read_words: bool,
+
 }
