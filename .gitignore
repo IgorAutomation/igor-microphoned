@@ -1,4 +1,6 @@
 /target
 .idea
+/build
+__pycache__/
 
 igor-microphoned-daemon/Cargo.lock
